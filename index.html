@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light only">
+<title>お絵描きボード</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root{
+    --bg: #FBF3E3;
+    --panel: #FFFFFF;
+    --panel-raised: #FFEACB;
+    --line: #D8C6A0;
+    --text: #221D16;
+    --text-dim: #5C5548;
+    --text-faint: #857D6C;
+
+    --idea: #E85A38;
+    --rough: #1D8F9E;
+    --done: #3D9E4D;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html{color-scheme: light only;}
+  body{
+    margin:0;
+    font-family: "Zen Kaku Gothic New", -apple-system, sans-serif;
+    background: var(--bg) !important;
+    color: var(--text) !important;
+    min-height:100vh;
+    touch-action: manipulation;
+  }
+  input, textarea, button, select{ color-scheme: light only; -webkit-appearance: none; appearance: none; }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg: #FBF3E3; --panel: #FFFFFF; --panel-raised: #FFEACB;
+      --line: #D8C6A0; --text: #221D16; --text-dim: #5C5548; --text-faint: #857D6C;
+      --idea: #E85A38; --rough: #1D8F9E; --done: #3D9E4D;
+    }
+    body{ background: var(--bg) !important; color: var(--text) !important; }
+    .add-bar input, .add-bar textarea, .search-box input{ background: #FFFFFF !important; color: #221D16 !important; }
+  }
+  .mono{font-family:"JetBrains Mono", monospace;}
+
+  header{ padding: 26px 70px 16px; text-align:center; border-bottom: 2px solid var(--line); position:relative; }
+  header h1{ font-size: 22px; font-weight:900; margin:0; letter-spacing: 0.06em; color: var(--idea); }
+  header p{ margin:9px 0 0; font-size:12.5px; color: var(--text-dim); letter-spacing:0.03em; font-weight:500; }
+  .folder-btn-fixed{
+    position:fixed; top:16px; left:16px; z-index:60;
+    border:2px solid var(--line); background: var(--panel); color: var(--text-dim);
+    border-radius:50%; width:50px; height:50px; font-size:20px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .folder-btn-fixed:hover{border-color:var(--idea); color:var(--idea);}
+  .add-btn-inline{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    width:100%;
+    border:2px solid var(--idea); background: var(--idea); color:#fff;
+    border-radius:14px; padding:14px; font-size:15px; font-weight:900; cursor:pointer;
+    margin-bottom:20px;
+    box-shadow: 0 3px 0 #B33F24;
+  }
+  .add-btn-inline:active{transform: translateY(2px); box-shadow: 0 1px 0 #B33F24;}
+  .trash-btn{
+    position:fixed; top:16px; right:16px; z-index:60;
+    border:2px solid var(--line); background: var(--panel); color: var(--text-dim);
+    border-radius:50%; width:50px; height:50px; font-size:22px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .trash-btn:hover{border-color:#B33F24; color:#B33F24;}
+  .trash-badge{
+    position:fixed; top:14px; right:12px; z-index:61;
+    background:#B33F24; color:#fff; font-size:10px; font-weight:900; border-radius:10px;
+    min-width:17px; height:17px; display:none; align-items:center; justify-content:center; padding:0 4px;
+  }
+
+  .add-bar{ max-width: 820px; margin: 20px auto 6px; padding: 0 20px; display:flex; flex-direction:column; gap:10px; }
+  .field-label{ font-size:11.5px; font-weight:700; color: var(--text-dim); margin-bottom:2px; }
+  .add-bar input[type=text], .add-bar textarea{
+    width:100%; border:2px solid var(--line); border-radius:10px; padding:12px 14px;
+    font-size:15px; font-family:inherit; background: var(--panel); color:var(--text);
+  }
+  .add-bar input[type=text]{height:48px;}
+  .add-bar textarea{resize:vertical; height:90px;}
+  .add-bar input::placeholder, .add-bar textarea::placeholder{color:var(--text-faint);}
+  .add-bar input:focus, .add-bar textarea:focus{outline:none; border-color:var(--idea);}
+  .add-bar-buttons{ display:flex; gap:8px; }
+  .icon-btn{
+    border:2px solid var(--line); background: var(--panel); border-radius:10px; padding:0 16px;
+    font-size:13.5px; cursor:pointer; color:var(--text-dim); display:flex; align-items:center;
+    justify-content:center; gap:6px; letter-spacing:0.02em; height:50px;
+  }
+  .icon-btn:hover{border-color:var(--text-dim); color:var(--text);}
+  .img-btn{ font-size:13px; color: var(--text-dim); background:none; border-style:dashed; flex:1; }
+  .add-btn{
+    background: var(--idea); border-color: var(--idea); color:#fff; font-weight:900; font-size:17px;
+    padding:0 34px; border-radius:11px; box-shadow: 0 3px 0 #B33F24; flex:1.4;
+  }
+  .add-btn:hover{filter:brightness(1.05); color:#fff; transform: translateY(1px); box-shadow: 0 2px 0 #B33F24;}
+  .add-btn:active{transform: translateY(3px); box-shadow: none;}
+
+  .thumb-preview{ display:flex; align-items:center; gap:8px; max-width:820px; margin: 4px auto 0; padding: 0 20px; font-size:13px; color:var(--text-dim); }
+  .thumb-preview img{height:40px; border-radius:6px; border:2px solid var(--line);}
+  .thumb-preview button{ border:none; background:none; color:#E05B45; cursor:pointer; font-size:13px; font-weight:700; }
+
+  .board{ max-width: 820px; margin: 24px auto 60px; padding: 0 20px; }
+  .tab-bar{ display:flex; gap: 26px; border-bottom: 2px solid var(--line); margin-bottom: 24px; }
+  .tab{
+    background:none; border:none; cursor:pointer; padding: 6px 2px 14px; font-size:16px; font-weight:900;
+    color: var(--text-dim); letter-spacing:0.02em; display:flex; align-items:baseline; gap:8px; position:relative;
+  }
+  .tab .n{font-family:"JetBrains Mono", monospace; font-weight:500; font-size:12.5px;}
+  .tab::after{ content:""; position:absolute; left:0; right:0; bottom:-2px; height:3px; border-radius:2px; background: transparent; }
+  .tab:hover{color: var(--text);}
+  .tab.active{color: var(--text);}
+  .tab-idea.active::after{background:var(--idea);}
+  .tab-rough.active::after{background:var(--rough);}
+  .tab-done.active::after{background:var(--done);}
+  .tab-idea.active .n{color:#fff; background:var(--idea); border-radius:8px; padding:1px 7px;}
+  .tab-rough.active .n{color:#fff; background:var(--rough); border-radius:8px; padding:1px 7px;}
+  .tab-done.active .n{color:#fff; background:var(--done); border-radius:8px; padding:1px 7px;}
+  .column{display:none;}
+  .column.active{display:block;}
+
+  .search-box{width:100%; margin-bottom:18px;}
+  .search-box input{
+    width:100%; padding:14px 16px; border-radius:10px; border:2px solid var(--line);
+    font-size:15px; background: var(--panel); color:var(--text); font-family:inherit;
+  }
+  .search-box input::placeholder{color:var(--text-dim);}
+  .search-box input:focus{outline:none;border-color:var(--idea);}
+
+  .cards{display:flex; flex-direction:column; gap:8px; min-height: 40px;}
+
+  .card-wrap{ display:flex; flex-direction:column; }
+  .card-row{
+    background: var(--panel); border-radius:12px; padding:13px 14px; border:2px solid var(--line);
+    border-left: 5px solid var(--idea); box-shadow: 0 2px 8px rgba(46,42,36,0.06);
+    display:flex; align-items:center; gap:8px; touch-action:none;
+  }
+  .card-row.state-rough{border-left-color:var(--rough);}
+  .card-row.state-done{border-left-color:var(--done);}
+  .card-row .drag-handle{
+    flex-shrink:0; color: var(--text-faint); font-size:19px; letter-spacing:-2px;
+    padding:8px 4px; cursor:grab; touch-action:none; user-select:none;
+  }
+  .card-row .row-title-wrap{ flex:1; min-width:0; cursor:pointer; }
+  .card-row .row-folder-tag{
+    display:inline-block; font-size:10px; font-weight:700; color: var(--idea);
+    background: var(--panel-raised); border-radius:6px; padding:1px 6px; margin-bottom:4px;
+  }
+  .card-row .row-title{ font-size:15.5px; font-weight:900; color: var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .card-row .row-btn{
+    flex-shrink:0; border:none; background:none; cursor:pointer; padding:6px; display:flex; align-items:center; color: var(--text-faint);
+  }
+  .card-row .row-btn.star.active{color:#E0A83E;}
+  .card-row .row-btn.trash:hover{color:#B33F24;}
+  .card-row .row-btn.star:hover{color:#E0A83E;}
+  .card-row .row-btn.caret{ transition: transform 0.15s; }
+  .card-row .row-btn.caret.open{ transform: rotate(180deg); }
+
+  .row-expand{
+    display:none;
+    background: var(--panel-raised);
+    border:2px solid var(--line);
+    border-top:none;
+    border-radius:0 0 10px 10px;
+    padding:10px 14px 12px;
+    margin:-6px 4px 0;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  .row-expand.open{display:flex;}
+  .pill{
+    font-size:13px; border:2px solid var(--line); border-radius:9px; padding:8px 14px; cursor:pointer;
+    background: var(--panel); color: var(--text); letter-spacing:0.02em; font-weight:700;
+  }
+  .pill:hover{border-color:var(--text-dim);}
+  .pill.rough:hover{border-color:var(--rough); color:var(--rough);}
+  .pill.done:hover{border-color:var(--done); color:var(--done);}
+
+  .empty-hint{
+    font-size:14px; color:var(--text-dim); text-align:center; padding: 36px 4px;
+    border:2px dashed var(--line); border-radius:10px; font-weight:500;
+  }
+
+  .drag-ghost{
+    position:fixed; z-index:200; pointer-events:none; opacity:0.9;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.25); border-radius:12px; transform: scale(1.02);
+  }
+  .drop-placeholder{
+    border:2.5px dashed var(--idea);
+    background: rgba(232,90,56,0.10);
+    border-radius:12px;
+    box-sizing:border-box;
+  }
+  .folder-card.drag-target-hover{
+    border-color:var(--idea) !important;
+    background: rgba(232,90,56,0.14) !important;
+    transform: scale(1.04);
+  }
+
+  .folder-overlay{ position:fixed; inset:0; background: var(--bg); z-index:80; display:none; flex-direction:column; }
+  .folder-overlay.show{display:flex;}
+  .folder-overlay-header{
+    display:flex; align-items:center; gap:12px; padding:18px 20px 14px;
+    border-bottom:2px solid var(--line); flex-shrink:0;
+  }
+  .folder-back-btn{
+    border:2px solid var(--line); background: var(--panel); color: var(--text);
+    border-radius:9px; padding:8px 14px; font-size:13px; font-weight:700; cursor:pointer;
+  }
+  .folder-overlay-title{font-size:16px; font-weight:900; color: var(--text); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .folder-delete-btn{
+    border:2px solid var(--line); background: var(--panel); color:#B33F24;
+    border-radius:9px; padding:8px 14px; font-size:12.5px; font-weight:700; cursor:pointer;
+  }
+
+  .folder-split{ flex:1; display:flex; flex-direction:column; overflow:hidden; }
+  .folder-top{ padding: 16px 20px; border-bottom: 2px solid var(--line); overflow-y:auto; max-height:60%; flex-shrink:0; }
+  .folder-top-label{font-size:12px; font-weight:700; color:var(--text-dim); margin-bottom:10px;}
+  .folder-grid{ display:grid; grid-template-columns: repeat(2, 1fr); gap:12px; }
+  .folder-card{
+    background: var(--panel); border:2px solid var(--line); border-radius:14px; padding:16px 10px;
+    text-align:center; cursor:pointer; transition: transform 0.1s, border-color 0.15s, background 0.15s;
+  }
+  .folder-card:hover{transform: translateY(-2px); border-color: var(--idea);}
+  .folder-card .fname{font-size:14px; font-weight:900; color: var(--text); margin-bottom:4px;}
+  .folder-card .fcount{font-size:11px; color: var(--text-dim); font-family:"JetBrains Mono", monospace;}
+  .folder-card.new-folder{
+    border-style:dashed; color: var(--text-dim); display:flex; align-items:center;
+    justify-content:center; font-weight:700; font-size:13px;
+  }
+  .folder-card.new-folder:hover{color:var(--idea); border-color:var(--idea);}
+
+  .folder-bottom{ flex:1; overflow-y:auto; padding: 16px 20px 40px; }
+  .folder-bottom-label{font-size:12px; font-weight:700; color:var(--text-dim); margin-bottom:10px;}
+  .drag-card{
+    background: var(--panel); border:2px solid var(--line); border-left:5px solid var(--idea);
+    border-radius:10px; padding:11px 13px; margin-bottom:10px; cursor:grab; font-size:13.5px;
+    font-weight:700; color:var(--text); touch-action:none; user-select:none;
+  }
+  .drag-card.state-rough{border-left-color:var(--rough);}
+  .drag-card.state-done{border-left-color:var(--done);}
+  .drag-card .dsub{font-size:11px; color:var(--text-dim); font-weight:500; margin-top:3px;}
+
+  .folder-detail{ flex:1; overflow-y:auto; padding: 18px 20px 40px; display:none; }
+  .folder-detail.show{display:block;}
+  .folder-detail-tabbar{ display:flex; gap: 22px; border-bottom: 2px solid var(--line); margin-bottom: 20px; }
+  .folder-detail-tab{
+    background:none; border:none; cursor:pointer; padding: 6px 2px 12px; font-size:14.5px;
+    font-weight:900; color: var(--text-dim); display:flex; align-items:baseline; gap:7px; position:relative;
+  }
+  .folder-detail-tab .n{font-family:"JetBrains Mono", monospace; font-weight:500; font-size:12px;}
+  .folder-detail-tab::after{ content:""; position:absolute; left:0; right:0; bottom:-2px; height:3px; border-radius:2px; background: transparent; }
+  .folder-detail-tab.active{color: var(--text);}
+  .folder-detail-tab[data-fstate="idea"].active::after{background:var(--idea);}
+  .folder-detail-tab[data-fstate="rough"].active::after{background:var(--rough);}
+  .folder-detail-tab[data-fstate="done"].active::after{background:var(--done);}
+  .folder-detail-tab[data-fstate="idea"].active .n{color:#fff; background:var(--idea); border-radius:8px; padding:1px 7px;}
+  .folder-detail-tab[data-fstate="rough"].active .n{color:#fff; background:var(--rough); border-radius:8px; padding:1px 7px;}
+  .folder-detail-tab[data-fstate="done"].active .n{color:#fff; background:var(--done); border-radius:8px; padding:1px 7px;}
+  .folder-detail-panel{display:none;}
+  .folder-detail-panel.active{display:block;}
+  .folder-empty{text-align:center; color: var(--text-dim); font-size:13.5px; padding:30px 4px;}
+
+  .trash-overlay{ position:fixed; inset:0; background: var(--bg); z-index:90; display:none; flex-direction:column; }
+  .trash-overlay.show{display:flex;}
+  .trash-list{flex:1; overflow-y:auto; padding:20px;}
+  .trash-item{
+    background: var(--panel); border:2px solid var(--line); border-radius:10px; padding:12px 14px;
+    margin-bottom:10px; display:flex; align-items:center; gap:10px;
+  }
+  .trash-item .tt{flex:1; font-size:14px; font-weight:700; color:var(--text);}
+  .trash-item .tt .sub{display:block; font-size:11.5px; font-weight:500; color:var(--text-dim); margin-top:2px;}
+  .trash-mini-btn{
+    border:2px solid var(--line); background: var(--panel); border-radius:8px;
+    padding:6px 11px; font-size:11.5px; font-weight:700; cursor:pointer; color:var(--text);
+  }
+  .trash-mini-btn.restore:hover{border-color:var(--done); color:var(--done);}
+  .trash-mini-btn.perm:hover{border-color:#B33F24; color:#B33F24;}
+
+  .lightbox{
+    position:fixed; inset:0; background:rgba(0,0,0,0.9); display:none; align-items:center;
+    justify-content:center; z-index:100; padding:20px;
+  }
+  .lightbox.show{display:flex;}
+  .lightbox img{max-width:100%; max-height:100%; border-radius:6px;}
+
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(30,25,18,0.55); display:none;
+    align-items:center; justify-content:center; z-index:250; padding:20px;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal-box{ background: var(--panel); border-radius:16px; padding:22px; max-width:420px; width:100%; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+  .modal-title{font-size:16px; font-weight:900; color:var(--text); margin-bottom:14px;}
+  .modal-msg{font-size:14px; color:var(--text-dim); margin-bottom:16px; line-height:1.6;}
+  .modal-box input[type=text], .modal-box textarea{
+    width:100%; border:2px solid var(--line); border-radius:10px; padding:12px 14px;
+    font-size:15px; font-family:inherit; background: var(--panel); color:var(--text); margin-bottom:12px;
+  }
+  .modal-box textarea{resize:vertical; height:80px;}
+  .modal-box input:focus, .modal-box textarea:focus{outline:none; border-color:var(--idea);}
+  .modal-field-label{font-size:11.5px; font-weight:700; color:var(--text-dim); margin-bottom:4px;}
+  .modal-actions{display:flex; gap:10px; margin-top:6px;}
+  .modal-btn{ flex:1; border:2px solid var(--line); background: var(--panel); color: var(--text); border-radius:10px; padding:12px; font-size:14px; font-weight:700; cursor:pointer; }
+  .modal-btn.primary{ background: var(--idea); border-color: var(--idea); color:#fff; }
+  .modal-btn.danger{ background:#B33F24; border-color:#B33F24; color:#fff; }
+
+  .modal-box.item-modal{max-width:460px;}
+  .item-modal .im-image{ width:100%; border-radius:10px; margin-bottom:14px; border:2px solid var(--line); cursor:pointer; }
+  .item-modal .im-detail-view{
+    font-size:14.5px; color:var(--text); white-space:pre-wrap; word-break:break-word; line-height:1.7;
+    background: var(--panel-raised); border-radius:10px; padding:12px 14px; margin-bottom:16px;
+  }
+  .item-modal .im-title{ font-size:18px; font-weight:900; color:var(--text); line-height:1.4; }
+  .item-modal .im-star{ flex-shrink:0; border:none; background:none; cursor:pointer; color: var(--text-faint); }
+  .item-modal .im-star.active{color:#E0A83E;}
+  .item-modal .im-folder-tag{
+    display:inline-block; font-size:11px; font-weight:700; color: var(--idea);
+    background: var(--panel-raised); border-radius:6px; padding:2px 8px; margin-bottom:8px;
+  }
+  .im-action-row{ display:flex; gap:10px; margin-bottom:14px; }
+  .im-action-btn{
+    flex:1; display:flex; flex-direction:column; align-items:center; gap:6px;
+    border:2px solid var(--line); background: var(--panel); border-radius:12px; padding:14px 8px;
+    cursor:pointer; color:var(--text); font-size:12.5px; font-weight:700;
+  }
+  .im-action-btn:hover{border-color:var(--idea); color:var(--idea);}
+  .im-action-btn svg{width:22px; height:22px;}
+  .im-header-row{ display:flex; align-items:flex-start; gap:10px; }
+  .im-trash-btn{
+    flex-shrink:0; border:2px solid var(--line); background: var(--panel); border-radius:10px;
+    width:38px; height:38px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-dim);
+  }
+  .im-trash-btn:hover{border-color:#B33F24; color:#B33F24;}
+  .im-divider{border:none; border-top:1.5px solid var(--line); margin:16px 0;}
+  .add-modal-imgrow{ display:flex; gap:8px; align-items:center; margin-bottom:14px; }
+  .add-modal-imgbtn{
+    border:2px dashed var(--line); background:none; color:var(--text-dim); border-radius:10px;
+    padding:10px 14px; font-size:13px; cursor:pointer; flex:1;
+  }
+  .add-modal-thumb{ display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+  .add-modal-thumb img{ height:44px; border-radius:6px; border:2px solid var(--line); }
+  .add-modal-thumb button{ border:none; background:none; color:#E05B45; font-size:13px; font-weight:700; cursor:pointer; }
+</style>
+</head>
+<body>
+
+<button class="folder-btn-fixed" id="openFolderBtn" title="フォルダ"></button>
+<button class="trash-btn" id="openTrashBtn" title="ゴミ箱"></button>
+<div class="trash-badge" id="trashBadge">0</div>
+
+<header>
+  <h1>SKETCH BOARD</h1>
+  <p>MEMO &nbsp;→&nbsp; DRAFT &nbsp;→&nbsp; FINISHED</p>
+</header>
+
+<div class="board">
+  <button class="add-btn-inline" id="openAddBtn">＋ 追加</button>
+  <div class="tab-bar">
+    <button class="tab tab-idea active" data-tab="idea">書きたいもの <span class="n" id="count-idea">0</span></button>
+    <button class="tab tab-rough" data-tab="rough">書き始めた <span class="n" id="count-rough">0</span></button>
+    <button class="tab tab-done" data-tab="done">書き終わり <span class="n" id="count-done">0</span></button>
+  </div>
+
+  <div class="column col-idea active" data-panel="idea">
+    <div class="search-box"><input type="text" id="search-idea" placeholder="描きたいものを検索"></div>
+    <div class="cards" id="cards-idea"></div>
+  </div>
+  <div class="column col-rough" data-panel="rough">
+    <div class="search-box"><input type="text" id="search-rough" placeholder="書き始めたものを検索"></div>
+    <div class="cards" id="cards-rough"></div>
+  </div>
+  <div class="column col-done" data-panel="done">
+    <div class="search-box"><input type="text" id="search-done" placeholder="書き終わったものを検索"></div>
+    <div class="cards" id="cards-done"></div>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox"><img id="lightboxImg" src=""></div>
+
+<div class="folder-overlay" id="folderOverlay">
+  <div class="folder-overlay-header">
+    <button class="folder-back-btn" id="folderBackBtn">← 戻る</button>
+    <div class="folder-overlay-title" id="folderOverlayTitle">フォルダ</div>
+    <button class="folder-delete-btn" id="folderDeleteBtn" style="display:none;">削除</button>
+  </div>
+
+  <div class="folder-split" id="folderSplitView">
+    <div class="folder-top">
+      <div class="folder-top-label">フォルダ(下のメモをドラッグして追加)</div>
+      <div class="folder-grid" id="folderGrid"></div>
+    </div>
+    <div class="folder-bottom">
+      <div class="folder-bottom-label">ホームのメモ</div>
+      <div id="folderDragList"></div>
+    </div>
+  </div>
+
+  <div class="folder-detail" id="folderDetailView"></div>
+</div>
+
+<div class="trash-overlay" id="trashOverlay">
+  <div class="folder-overlay-header">
+    <button class="folder-back-btn" id="trashBackBtn">← 戻る</button>
+    <div class="folder-overlay-title">ゴミ箱</div>
+  </div>
+  <div class="trash-list" id="trashList"></div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-box" id="modalBox"></div>
+</div>
+
+<script>
+const STORAGE_KEY = 'sketch-items';
+const FOLDER_KEY = 'sketch-folders';
+let items = [];
+let folders = [];
+let newImageData = null;
+
+const $ = (id) => document.getElementById(id);
+const escapeHtml = (s) => { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML; };
+const uid = () => 'id-' + Date.now() + '-' + Math.random().toString(36).slice(2,8);
+
+const TRASH_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>';
+const STAR_SVG = (filled) => `<svg width="17" height="17" viewBox="0 0 24 24" fill="${filled ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
+const CARET_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+const IMAGE_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>';
+const EDIT_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>';
+const FOLDER_SVG = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>';
+
+function fileToDataURL(file){
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+async function loadItems(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    items = raw ? JSON.parse(raw) : [];
+  }catch(e){ items = []; }
+  try{
+    const raw2 = localStorage.getItem(FOLDER_KEY);
+    folders = raw2 ? JSON.parse(raw2) : [];
+  }catch(e){ folders = []; }
+
+  let migrated = false;
+  items.forEach(it => {
+    if(it.folder && !it.folderId){
+      let f = folders.find(f => f.name === it.folder && f.parentId === null);
+      if(!f){ f = {id: uid(), name: it.folder, parentId: null}; folders.push(f); migrated = true; }
+      it.folderId = f.id;
+      delete it.folder;
+      migrated = true;
+    }
+    if(it.favorite === undefined) it.favorite = false;
+    if(it.deleted === undefined) it.deleted = false;
+  });
+  if(migrated){ await saveItems(); await saveFolders(); }
+
+  render();
+  updateTrashBadge();
+}
+
+async function saveItems(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
+  catch(e){ console.error('保存に失敗しました', e); }
+}
+async function saveFolders(){
+  try{ localStorage.setItem(FOLDER_KEY, JSON.stringify(folders)); }
+  catch(e){ console.error('保存に失敗しました', e); }
+}
+
+/* ===== メモ追加モーダル ===== */
+let addModalImageData = null;
+
+$('openAddBtn').addEventListener('click', () => openAddModal());
+
+function openAddModal(){
+  addModalImageData = null;
+  const box = $('modalBox');
+  box.className = 'modal-box';
+  box.innerHTML = `
+    <div class="modal-title">メモを追加</div>
+    <div class="modal-field-label">タイトル</div>
+    <input type="text" id="addTitle" placeholder="例: メグメグのイラスト">
+    <div class="modal-field-label">詳細</div>
+    <textarea id="addDetail" placeholder="例: 下から見た構図でピースをしている"></textarea>
+    <div class="add-modal-imgrow">
+      <label class="add-modal-imgbtn" for="addImageInput">画像を添付</label>
+      <input type="file" id="addImageInput" accept="image/*" style="display:none;">
+    </div>
+    <div class="add-modal-thumb" id="addImagePreview" style="display:none;"></div>
+    <div class="modal-actions">
+      <button class="modal-btn" id="mCancel">キャンセル</button>
+      <button class="modal-btn primary" id="mOk">追加</button>
+    </div>`;
+
+  $('addImageInput').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    addModalImageData = await fileToDataURL(file);
+    const prev = $('addImagePreview');
+    prev.style.display = 'flex';
+    prev.innerHTML = '';
+    const img = document.createElement('img');
+    img.src = addModalImageData;
+    const rm = document.createElement('button');
+    rm.textContent = '画像を消す';
+    rm.onclick = () => { addModalImageData = null; prev.style.display = 'none'; $('addImageInput').value=''; };
+    prev.appendChild(img); prev.appendChild(rm);
+  });
+
+  $('mCancel').onclick = closeModal;
+  $('mOk').onclick = async () => {
+    const title = $('addTitle').value.trim();
+    const detail = $('addDetail').value.trim();
+    if(!title && !detail && !addModalImageData){ $('addTitle').focus(); return; }
+    items.unshift({
+      id: uid(), title, detail, image: addModalImageData, state: 'idea',
+      folderId: null, deleted: false, favorite: false, createdAt: Date.now()
+    });
+    await saveItems();
+    render();
+    closeModal();
+  };
+  $('modalOverlay').classList.add('show');
+  setTimeout(() => $('addTitle') && $('addTitle').focus(), 50);
+}
+
+function moveState(id, newState){
+  const it = items.find(i => i.id === id);
+  if(it) it.state = newState;
+  saveItems();
+  render();
+  if(currentFolderStack.length) renderFolderDetail();
+}
+
+function trashItem(id){
+  openConfirmModal('このメモをゴミ箱に移動する？', () => {
+    const it = items.find(i => i.id === id);
+    if(it){ it.deleted = true; it.deletedAt = Date.now(); }
+    saveItems();
+    render();
+    updateTrashBadge();
+    if(currentFolderStack.length) renderFolderDetail();
+    renderFolderDragList();
+  });
+}
+
+function restoreItem(id){
+  const it = items.find(i => i.id === id);
+  if(it){ it.deleted = false; delete it.deletedAt; }
+  saveItems();
+  renderTrash();
+  render();
+  updateTrashBadge();
+}
+
+function permanentlyDelete(id){
+  openConfirmModal('完全に削除する？元に戻せないよ。', () => {
+    items = items.filter(i => i.id !== id);
+    saveItems();
+    renderTrash();
+    updateTrashBadge();
+  }, true);
+}
+
+async function attachImageToCard(id){
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'image/*';
+  input.onchange = async () => {
+    const file = input.files[0];
+    if(!file) return;
+    const data = await fileToDataURL(file);
+    const it = items.find(i => i.id === id);
+    if(it) it.image = data;
+    await saveItems();
+    render();
+    if(currentFolderStack.length) renderFolderDetail();
+  };
+  input.click();
+}
+
+function showLightbox(src){ $('lightboxImg').src = src; $('lightbox').classList.add('show'); }
+$('lightbox').addEventListener('click', () => $('lightbox').classList.remove('show'));
+
+function toggleFavorite(id){
+  const it = items.find(i => i.id === id);
+  if(it) it.favorite = !it.favorite;
+  saveItems();
+  render();
+  if(currentFolderStack.length) renderFolderDetail();
+}
+
+function closeModal(){
+  $('modalOverlay').classList.remove('show');
+  $('modalBox').innerHTML = '';
+  $('modalBox').className = 'modal-box';
+}
+
+function openConfirmModal(message, onYes, danger){
+  const box = $('modalBox'); box.className = 'modal-box';
+  box.innerHTML = `
+    <div class="modal-msg">${escapeHtml(message)}</div>
+    <div class="modal-actions">
+      <button class="modal-btn" id="mCancel">キャンセル</button>
+      <button class="modal-btn ${danger ? 'danger' : 'primary'}" id="mOk">OK</button>
+    </div>`;
+  $('mCancel').onclick = closeModal;
+  $('mOk').onclick = () => { closeModal(); onYes(); };
+  $('modalOverlay').classList.add('show');
+}
+
+function openPromptModal(title, placeholder, onSubmit){
+  const box = $('modalBox'); box.className = 'modal-box';
+  box.innerHTML = `
+    <div class="modal-title">${escapeHtml(title)}</div>
+    <input type="text" id="mInput" placeholder="${escapeHtml(placeholder||'')}">
+    <div class="modal-actions">
+      <button class="modal-btn" id="mCancel">キャンセル</button>
+      <button class="modal-btn primary" id="mOk">追加</button>
+    </div>`;
+  $('mCancel').onclick = closeModal;
+  $('mOk').onclick = () => {
+    const val = $('mInput').value.trim();
+    if(!val) return;
+    closeModal();
+    onSubmit(val);
+  };
+  $('modalOverlay').classList.add('show');
+  setTimeout(() => $('mInput') && $('mInput').focus(), 50);
+}
+
+function openEditModal(it){
+  const box = $('modalBox'); box.className = 'modal-box';
+  box.innerHTML = `
+    <div class="modal-title">メモを編集</div>
+    <div class="modal-field-label">タイトル</div>
+    <input type="text" id="mTitle" value="${escapeHtml(it.title||'')}">
+    <div class="modal-field-label">詳細</div>
+    <textarea id="mDetail">${escapeHtml(it.detail||'')}</textarea>
+    <div class="modal-actions">
+      <button class="modal-btn" id="mCancel">キャンセル</button>
+      <button class="modal-btn primary" id="mOk">保存</button>
+    </div>`;
+  $('mCancel').onclick = closeModal;
+  $('mOk').onclick = async () => {
+    it.title = $('mTitle').value.trim();
+    it.detail = $('mDetail').value.trim();
+    closeModal();
+    await saveItems();
+    render();
+    if(currentFolderStack.length) renderFolderDetail();
+  };
+  $('modalOverlay').classList.add('show');
+}
+
+function folderPathLabel(folderId){
+  if(!folderId) return '';
+  const path = [];
+  let f = folders.find(x => x.id === folderId);
+  while(f){ path.unshift(f.name); f = folders.find(x => x.id === f.parentId); }
+  return path.join(' / ');
+}
+
+function openItemModal(it){
+  const box = $('modalBox');
+  box.className = 'modal-box item-modal';
+  box.innerHTML = `
+    <div class="im-header-row">
+      <div style="flex:1;">
+        ${it.folderId ? `<div class="im-folder-tag">${escapeHtml(folderPathLabel(it.folderId))}</div>` : ''}
+        <div class="im-title">${escapeHtml(it.title || '(無題)')}</div>
+      </div>
+      <button class="im-star ${it.favorite ? 'active' : ''}" id="imStarBtn">${STAR_SVG(it.favorite)}</button>
+      <button class="im-trash-btn" id="imTrashBtn">${TRASH_SVG}</button>
+    </div>
+    <div style="height:12px;"></div>
+    ${it.image ? `<img class="im-image" id="imImage" src="${it.image}">` : ''}
+    <div class="im-detail-view">${it.detail ? escapeHtml(it.detail) : '(詳細なし)'}</div>
+    <div class="im-action-row">
+      <button class="im-action-btn" id="imImgBtn">${IMAGE_SVG}<span>${it.image ? '画像変更' : '画像追加'}</span></button>
+      <button class="im-action-btn" id="imEditBtn">${EDIT_SVG}<span>編集</span></button>
+    </div>
+    <hr class="im-divider">
+    <button class="modal-btn" id="mCancel">閉じる</button>
+  `;
+  if(it.image){ $('imImage').onclick = () => showLightbox(it.image); }
+  $('imStarBtn').onclick = () => { toggleFavorite(it.id); closeModal(); };
+  $('imTrashBtn').onclick = () => { closeModal(); trashItem(it.id); };
+  $('imImgBtn').onclick = () => { closeModal(); attachImageToCard(it.id); };
+  $('imEditBtn').onclick = () => openEditModal(it);
+  $('mCancel').onclick = closeModal;
+  $('modalOverlay').classList.add('show');
+}
+
+function stateActionPills(it, container){
+  container.innerHTML = '';
+  if(it.state === 'idea'){
+    const roughBtn = document.createElement('button');
+    roughBtn.className = 'pill rough'; roughBtn.textContent = '書き始めた';
+    roughBtn.onclick = () => moveState(it.id, 'rough');
+    container.appendChild(roughBtn);
+    const doneBtn = document.createElement('button');
+    doneBtn.className = 'pill done'; doneBtn.textContent = '書き終わった';
+    doneBtn.onclick = () => moveState(it.id, 'done');
+    container.appendChild(doneBtn);
+  } else if(it.state === 'rough'){
+    const doneBtn = document.createElement('button');
+    doneBtn.className = 'pill done'; doneBtn.textContent = '書き終わった';
+    doneBtn.onclick = () => moveState(it.id, 'done');
+    container.appendChild(doneBtn);
+    const backBtn = document.createElement('button');
+    backBtn.className = 'pill'; backBtn.textContent = '戻す';
+    backBtn.onclick = () => moveState(it.id, 'idea');
+    container.appendChild(backBtn);
+  } else {
+    const backBtn = document.createElement('button');
+    backBtn.className = 'pill'; backBtn.textContent = '書き始めたに戻す';
+    backBtn.onclick = () => moveState(it.id, 'rough');
+    container.appendChild(backBtn);
+  }
+}
+
+const expandedIds = new Set();
+
+function cardEl(it){
+  const wrap = document.createElement('div');
+  wrap.className = 'card-wrap';
+
+  const row = document.createElement('div');
+  row.className = 'card-row state-' + it.state;
+  row.dataset.id = it.id;
+
+  const handle = document.createElement('div');
+  handle.className = 'drag-handle';
+  handle.textContent = '⠿';
+  row.appendChild(handle);
+
+  const titleWrap = document.createElement('div');
+  titleWrap.className = 'row-title-wrap';
+  if(it.folderId){
+    const tag = document.createElement('div');
+    tag.className = 'row-folder-tag';
+    tag.textContent = folderPathLabel(it.folderId);
+    titleWrap.appendChild(tag);
+  }
+  const t = document.createElement('div');
+  t.className = 'row-title';
+  t.textContent = it.title || '(無題)';
+  titleWrap.appendChild(t);
+  titleWrap.onclick = () => openItemModal(it);
+  row.appendChild(titleWrap);
+
+  const caretBtn = document.createElement('button');
+  caretBtn.className = 'row-btn caret' + (expandedIds.has(it.id) ? ' open' : '');
+  caretBtn.innerHTML = CARET_SVG;
+  caretBtn.onclick = (e) => {
+    e.stopPropagation();
+    if(expandedIds.has(it.id)) expandedIds.delete(it.id); else expandedIds.add(it.id);
+    caretBtn.classList.toggle('open');
+    expandBox.classList.toggle('open');
+  };
+  row.appendChild(caretBtn);
+
+  const starBtn = document.createElement('button');
+  starBtn.className = 'row-btn star' + (it.favorite ? ' active' : '');
+  starBtn.innerHTML = STAR_SVG(it.favorite);
+  starBtn.onclick = (e) => { e.stopPropagation(); toggleFavorite(it.id); };
+  row.appendChild(starBtn);
+
+  const trashBtn = document.createElement('button');
+  trashBtn.className = 'row-btn trash';
+  trashBtn.innerHTML = TRASH_SVG;
+  trashBtn.onclick = (e) => { e.stopPropagation(); trashItem(it.id); };
+  row.appendChild(trashBtn);
+
+  wrap.appendChild(row);
+
+  const expandBox = document.createElement('div');
+  expandBox.className = 'row-expand' + (expandedIds.has(it.id) ? ' open' : '');
+  stateActionPills(it, expandBox);
+  wrap.appendChild(expandBox);
+
+  enableRowDrag(handle, row, wrap, it);
+
+  return wrap;
+}
+
+function enableRowDrag(handle, row, wrap, it){
+  handle.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    const container = wrap.parentElement;
+    if(!container) return;
+    const startRect = row.getBoundingClientRect();
+    const offsetX = e.clientX - startRect.left;
+    const offsetY = e.clientY - startRect.top;
+
+    const ghost = row.cloneNode(true);
+    ghost.className = 'card-row drag-ghost state-' + it.state;
+    ghost.style.width = startRect.width + 'px';
+    ghost.style.left = startRect.left + 'px';
+    ghost.style.top = startRect.top + 'px';
+    document.body.appendChild(ghost);
+
+    const placeholder = document.createElement('div');
+    placeholder.className = 'drop-placeholder';
+    placeholder.style.height = wrap.getBoundingClientRect().height + 'px';
+
+    wrap.style.display = 'none';
+    container.insertBefore(placeholder, wrap);
+
+    function onMove(ev){
+      ghost.style.left = (ev.clientX - offsetX) + 'px';
+      ghost.style.top = (ev.clientY - offsetY) + 'px';
+
+      const siblings = Array.from(container.children).filter(el => el !== placeholder && el !== wrap);
+      let inserted = false;
+      for(const sib of siblings){
+        const r = sib.getBoundingClientRect();
+        if(ev.clientY < r.top + r.height / 2){
+          container.insertBefore(placeholder, sib);
+          inserted = true;
+          break;
+        }
+      }
+      if(!inserted){ container.appendChild(placeholder); }
+    }
+
+    function onUp(){
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      ghost.remove();
+      container.insertBefore(wrap, placeholder);
+      placeholder.remove();
+      wrap.style.display = '';
+
+      const finalIds = Array.from(container.children)
+        .filter(el => el.classList.contains('card-wrap'))
+        .map(el => el.querySelector('.card-row').dataset.id);
+      applyReorder(finalIds);
+    }
+
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+  });
+}
+
+function applyReorder(finalIds){
+  const idSet = new Set(finalIds);
+  const originalIdxs = [];
+  items.forEach((it, idx) => { if(idSet.has(it.id)) originalIdxs.push(idx); });
+  if(originalIdxs.length === 0) return;
+  const insertAt = Math.min(...originalIdxs);
+  const moving = finalIds.map(id => items.find(i => i.id === id)).filter(Boolean);
+  items = items.filter(i => !idSet.has(i.id));
+  items.splice(insertAt, 0, ...moving);
+  saveItems();
+  render();
+  if(currentFolderStack.length) renderFolderDetail();
+}
+
+function render(){
+  const searchIdea = $('search-idea').value.trim().toLowerCase();
+  const searchRough = $('search-rough').value.trim().toLowerCase();
+  const searchDone = $('search-done').value.trim().toLowerCase();
+  const matches = (i, q) => !q || (i.title||'').toLowerCase().includes(q) || (i.detail||'').toLowerCase().includes(q);
+
+  const alive = items.filter(i => !i.deleted);
+
+  const ideaItems = alive.filter(i => i.state === 'idea' && matches(i, searchIdea));
+  const roughItems = alive.filter(i => i.state === 'rough' && matches(i, searchRough));
+  const doneItems = alive.filter(i => i.state === 'done' && matches(i, searchDone));
+
+  $('count-idea').textContent = alive.filter(i=>i.state==='idea').length;
+  $('count-rough').textContent = alive.filter(i=>i.state==='rough').length;
+  $('count-done').textContent = alive.filter(i=>i.state==='done').length;
+
+  fillColumn('cards-idea', ideaItems, '描きたいものがまだないよ。上のバーから追加してね。');
+  fillColumn('cards-rough', roughItems, '書き始めたらここに移動するよ。');
+  fillColumn('cards-done', doneItems, '書き終わった絵がここに並ぶよ。');
+}
+
+function fillColumn(elId, list, emptyText){
+  const el = $(elId);
+  el.innerHTML = '';
+  if(list.length === 0){
+    const hint = document.createElement('div');
+    hint.className = 'empty-hint';
+    hint.textContent = emptyText;
+    el.appendChild(hint);
+    return;
+  }
+  list.forEach(it => el.appendChild(cardEl(it)));
+}
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const target = tab.dataset.tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === target));
+    document.querySelectorAll('.column').forEach(c => c.classList.toggle('active', c.dataset.panel === target));
+  });
+});
+$('search-idea').addEventListener('input', render);
+$('search-rough').addEventListener('input', render);
+$('search-done').addEventListener('input', render);
+
+let currentFolderStack = [];
+
+$('openFolderBtn').addEventListener('click', () => {
+  currentFolderStack = [];
+  $('folderOverlay').classList.add('show');
+  showFolderLevel();
+});
+$('folderBackBtn').addEventListener('click', () => {
+  if(currentFolderStack.length){
+    currentFolderStack.pop();
+    showFolderLevel();
+  }else{
+    $('folderOverlay').classList.remove('show');
+  }
+});
+$('folderDeleteBtn').addEventListener('click', () => {
+  const fid = currentFolderStack[currentFolderStack.length - 1];
+  if(!fid) return;
+  const f = folders.find(x => x.id === fid);
+  openConfirmModal(`「${f ? f.name : ''}」フォルダを削除する？(中のサブフォルダも削除され、メモはホームに残るよ)`, async () => {
+    const toDelete = collectDescendantFolderIds(fid);
+    toDelete.push(fid);
+    folders = folders.filter(x => !toDelete.includes(x.id));
+    items.forEach(it => { if(toDelete.includes(it.folderId)) it.folderId = null; });
+    await saveFolders();
+    await saveItems();
+    currentFolderStack.pop();
+    showFolderLevel();
+    render();
+  }, true);
+});
+
+function collectDescendantFolderIds(fid){
+  const children = folders.filter(f => f.parentId === fid).map(f => f.id);
+  let all = [...children];
+  children.forEach(c => { all = all.concat(collectDescendantFolderIds(c)); });
+  return all;
+}
+
+function currentFolderId(){
+  return currentFolderStack.length ? currentFolderStack[currentFolderStack.length - 1] : null;
+}
+
+function showFolderLevel(){
+  const fid = currentFolderId();
+  const f = fid ? folders.find(x => x.id === fid) : null;
+
+  $('folderOverlayTitle').textContent = f ? folderPathLabel(fid) : 'フォルダ';
+  $('folderDeleteBtn').style.display = f ? 'inline-block' : 'none';
+
+  renderFolderGrid(fid);
+  renderFolderDragList();
+
+  const detail = $('folderDetailView');
+  if(fid){
+    detail.classList.add('show');
+    renderFolderDetail();
+  }else{
+    detail.classList.remove('show');
+  }
+}
+
+function renderFolderGrid(parentId){
+  const grid = $('folderGrid');
+  grid.innerHTML = '';
+
+  const subFolders = folders.filter(f => f.parentId === parentId);
+  subFolders.forEach(f => {
+    const count = items.filter(i => i.folderId === f.id && !i.deleted).length;
+    const card = document.createElement('div');
+    card.className = 'folder-card';
+    card.dataset.folderId = f.id;
+    card.innerHTML = `<div class="fname">${escapeHtml(f.name)}</div><div class="fcount">${count} 件</div>`;
+    card.onclick = () => { currentFolderStack.push(f.id); showFolderLevel(); };
+    grid.appendChild(card);
+  });
+
+  const newCard = document.createElement('div');
+  newCard.className = 'folder-card new-folder';
+  newCard.textContent = '+ 新しいフォルダ';
+  newCard.onclick = () => {
+    openPromptModal('新しいフォルダ', '例: ゲーム、アニメ', async (name) => {
+      folders.push({id: uid(), name, parentId: parentId});
+      await saveFolders();
+      showFolderLevel();
+    });
+  };
+  grid.appendChild(newCard);
+}
+
+function renderFolderDragList(){
+  const list = $('folderDragList');
+  list.innerHTML = '';
+  const alive = items.filter(i => !i.deleted);
+  if(alive.length === 0){
+    list.innerHTML = '<div class="folder-empty">ホームにメモがまだないよ。</div>';
+    return;
+  }
+  const stateLabel = {idea:'書きたいもの', rough:'書き始めた', done:'書き終わり'};
+  alive.forEach(it => {
+    const d = document.createElement('div');
+    d.className = 'drag-card state-' + it.state;
+    d.dataset.id = it.id;
+    d.innerHTML = `${escapeHtml(it.title || '(無題)')}<div class="dsub">${stateLabel[it.state]}${it.folderId ? ' ・ ' + escapeHtml(folderPathLabel(it.folderId)) : ''}</div>`;
+    enableFolderAssignDrag(d, it);
+    list.appendChild(d);
+  });
+}
+
+function enableFolderAssignDrag(cardElm, it){
+  cardElm.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    const startRect = cardElm.getBoundingClientRect();
+    const offsetX = e.clientX - startRect.left;
+    const offsetY = e.clientY - startRect.top;
+
+    const ghost = cardElm.cloneNode(true);
+    ghost.className = 'drag-card drag-ghost state-' + it.state;
+    ghost.style.width = startRect.width + 'px';
+    ghost.style.left = startRect.left + 'px';
+    ghost.style.top = startRect.top + 'px';
+    document.body.appendChild(ghost);
+    cardElm.style.opacity = '0.35';
+
+    let currentTarget = null;
+
+    function onMove(ev){
+      ghost.style.left = (ev.clientX - offsetX) + 'px';
+      ghost.style.top = (ev.clientY - offsetY) + 'px';
+      ghost.style.pointerEvents = 'none';
+
+      const el = document.elementFromPoint(ev.clientX, ev.clientY);
+      const target = el ? el.closest('.folder-card') : null;
+      if(currentTarget && currentTarget !== target){
+        currentTarget.classList.remove('drag-target-hover');
+      }
+      if(target){ target.classList.add('drag-target-hover'); }
+      currentTarget = target;
+    }
+
+    async function onUp(){
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      ghost.remove();
+      cardElm.style.opacity = '';
+      if(currentTarget){
+        currentTarget.classList.remove('drag-target-hover');
+        const fid = currentTarget.dataset.folderId;
+        if(fid){
+          it.folderId = fid;
+          await saveItems();
+          renderFolderGrid(currentFolderId());
+          renderFolderDragList();
+          if(currentFolderStack.length) renderFolderDetail();
+          render();
+        }
+      }
+    }
+
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+  });
+}
+
+function renderFolderDetail(){
+  const detail = $('folderDetailView');
+  const fid = currentFolderId();
+  if(!fid) return;
+
+  const groups = [
+    {state:'idea', label:'書きたいもの'},
+    {state:'rough', label:'書き始めた'},
+    {state:'done', label:'書き終わり'}
+  ];
+  const prevActive = detail.querySelector('.folder-detail-tab.active');
+  const activeState = prevActive ? prevActive.dataset.fstate : 'idea';
+
+  detail.innerHTML = '';
+  const tabBar = document.createElement('div');
+  tabBar.className = 'folder-detail-tabbar';
+  groups.forEach(g => {
+    const count = items.filter(i => i.folderId === fid && i.state === g.state && !i.deleted).length;
+    const tab = document.createElement('button');
+    tab.className = 'folder-detail-tab' + (g.state === activeState ? ' active' : '');
+    tab.dataset.fstate = g.state;
+    tab.innerHTML = `${g.label} <span class="n">${count}</span>`;
+    tab.onclick = () => {
+      detail.querySelectorAll('.folder-detail-tab').forEach(t => t.classList.toggle('active', t === tab));
+      detail.querySelectorAll('.folder-detail-panel').forEach(p => p.classList.toggle('active', p.dataset.fstate === g.state));
+    };
+    tabBar.appendChild(tab);
+  });
+  detail.appendChild(tabBar);
+
+  groups.forEach(g => {
+    const list = items.filter(i => i.folderId === fid && i.state === g.state && !i.deleted);
+    const panel = document.createElement('div');
+    panel.className = 'folder-detail-panel' + (g.state === activeState ? ' active' : '');
+    panel.dataset.fstate = g.state;
+    const cards = document.createElement('div');
+    cards.className = 'cards';
+    if(list.length === 0){ cards.innerHTML = '<div class="empty-hint">まだないよ。</div>'; }
+    else{ list.forEach(it => cards.appendChild(cardEl(it))); }
+    panel.appendChild(cards);
+    detail.appendChild(panel);
+  });
+}
+
+$('openTrashBtn').addEventListener('click', () => { $('trashOverlay').classList.add('show'); renderTrash(); });
+$('trashBackBtn').addEventListener('click', () => { $('trashOverlay').classList.remove('show'); });
+
+function updateTrashBadge(){
+  const count = items.filter(i => i.deleted).length;
+  const badge = $('trashBadge');
+  badge.textContent = count;
+  badge.style.display = count > 0 ? 'flex' : 'none';
+}
+
+function renderTrash(){
+  const list = $('trashList');
+  list.innerHTML = '';
+  const trashed = items.filter(i => i.deleted).sort((a,b) => (b.deletedAt||0) - (a.deletedAt||0));
+  if(trashed.length === 0){ list.innerHTML = '<div class="folder-empty">ゴミ箱は空だよ。</div>'; return; }
+  const stateLabel = {idea:'書きたいもの', rough:'書き始めた', done:'書き終わり'};
+  trashed.forEach(it => {
+    const row = document.createElement('div');
+    row.className = 'trash-item';
+    row.innerHTML = `<div class="tt">${escapeHtml(it.title || '(無題)')}<span class="sub">${stateLabel[it.state]}${it.folderId ? ' ・ ' + escapeHtml(folderPathLabel(it.folderId)) : ''}</span></div>`;
+    const restoreBtn = document.createElement('button');
+    restoreBtn.className = 'trash-mini-btn restore'; restoreBtn.textContent = '元に戻す';
+    restoreBtn.onclick = () => restoreItem(it.id);
+    const permBtn = document.createElement('button');
+    permBtn.className = 'trash-mini-btn perm'; permBtn.textContent = '完全に削除';
+    permBtn.onclick = () => permanentlyDelete(it.id);
+    row.appendChild(restoreBtn); row.appendChild(permBtn);
+    list.appendChild(row);
+  });
+}
+
+loadItems();
+$('openTrashBtn').innerHTML = TRASH_SVG;
+$('openFolderBtn').innerHTML = FOLDER_SVG;
+</script>
+</body>
+</html>
