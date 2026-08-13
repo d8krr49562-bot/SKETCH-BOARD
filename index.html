@@ -942,7 +942,10 @@ function openItemModal(it){
     <div class="im-section-label">ページごとのメモ</div>
     <div class="im-pagenotes-list" id="pageNotesList"></div>
     <button class="im-addpage-btn" id="addPageBtn">＋ ページを追加</button>
-  ` : '';
+  ` : `
+    <div class="im-section-label">フリーメモ</div>
+    <textarea class="im-script-textarea" id="plotFreeText" placeholder="自由にメモを書く...">${escapeHtml(it.plotFree)}</textarea>
+  `;
 
   body.innerHTML = `
     <div class="im-folder-tag">${typeLabel(it)}${it.folderId ? ' ・ ' + escapeHtml(folderPathLabel(it.folderId)) : ''}</div>
@@ -976,11 +979,12 @@ function openItemModal(it){
   $('idStarBtn').onclick = () => { toggleFavorite(it.id); $('idStarBtn').className = 'im-star' + (it.favorite ? ' active' : ''); $('idStarBtn').innerHTML = STAR_SVG(it.favorite); };
   $('idTrashBtn').onclick = () => { trashItem(it.id, () => { $('itemDetailOverlay').classList.remove('show'); }); };
 
+  $('plotFreeText').addEventListener('blur', async () => {
+    it.plotFree = $('plotFreeText').value;
+    await saveItems();
+  });
+
   if(isManga){
-    $('plotFreeText').addEventListener('blur', async () => {
-      it.plotFree = $('plotFreeText').value;
-      await saveItems();
-    });
     renderTemplateRow(it);
     renderPlotFields(it);
     renderPageNotes(it);
